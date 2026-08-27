@@ -7,13 +7,17 @@
 
 A reproducible NVIDIA Model Optimizer workflow for converting `zai-org/GLM-5.3-Flash-BF16` into an **experts-only NVFP4** Hugging Face checkpoint on a single GB10 system by combining layerwise PTQ, Accelerate disk offload, streaming export, and shard-wise tensor-name reversal.
 
+## Hardware acknowledgment
+
+I do **not** currently own a DGX Spark. This reference run was accomplished using a **loaner DGX Spark provided by Weschera**. Their hardware access made it possible to develop, debug, and document this single-GB10 quantization/export workflow for the community.
+
 ## Reference result
 
 | Item | Reference run |
 |---|---:|
 | Source | `zai-org/GLM-5.3-Flash-BF16` |
 | Model | GLM-5.3-Flash, 320B total / 18B active |
-| Hardware | 1× NVIDIA DGX Spark / GB10 |
+| Hardware | 1× NVIDIA DGX Spark / GB10 — loaner provided by Weschera |
 | Usable memory | ~121 GiB unified memory + 15 GiB swap |
 | Source checkpoint | ~598.5 GiB BF16 |
 | Quant policy | Routed MoE experts: NVFP4 W4A4; FP8 KV config |
@@ -209,6 +213,7 @@ The overall debugging campaign took roughly 12 hours because several failed path
 
 - GLM-5.3-Flash: Z.ai
 - NVIDIA Model Optimizer / NVFP4 recipe: NVIDIA
+- Loaner DGX Spark hardware access: Weschera
 - Single-DGX-Spark offload/export workflow and reference reproduction: Victor Cruz (`vcruz305`)
 
 ## License
