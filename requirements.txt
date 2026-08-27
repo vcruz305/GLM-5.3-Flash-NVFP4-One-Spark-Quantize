@@ -1,0 +1,6 @@
+# Install a GB10-compatible PyTorch/CUDA stack first.
+nvidia-modelopt[all]>=0.46
+transformers>=5.16.1
+accelerate
+safetensors
+huggingface_hub
