@@ -38,6 +38,12 @@ def main() -> int:
     if str(algo).upper() != "NVFP4":
         errors.append(f"quant_algo is not NVFP4: {algo!r}")
 
+    excludes: list = []
+    if isinstance(qj.get("quantization"), dict):
+        excludes = list(qj["quantization"].get("exclude_modules") or [])
+    if not any("layers.45" in str(x) for x in excludes):
+        errors.append("hf_quant_config.json exclude_modules missing layers.45 (BF16 MTP)")
+
     parts = sorted(root.glob("__shard_part_*.safetensors"))
     if parts:
         errors.append(f"temporary shard parts remain: {len(parts)}")

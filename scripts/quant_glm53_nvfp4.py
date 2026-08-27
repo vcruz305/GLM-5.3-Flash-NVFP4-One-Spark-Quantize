@@ -136,6 +136,39 @@ def patch_streaming_export() -> None:
         print("PATCH_RESMOOTH_LOG_FAIL", type(exc).__name__, exc, flush=True)
 
 
+def ensure_mtp_bf16_excludes(data: dict) -> bool:
+    """Layer 45 NextN is grafted BF16; vLLM treats missing excludes as packed NVFP4."""
+    needed = [
+        "model.language_model.layers.45*",
+        "model.language_model.layers.45.mlp.experts*",
+        "model.language_model.layers.45.mlp.gate",
+        "model.language_model.layers.45.mlp.shared_experts*",
+        "model.language_model.layers.45.self_attn*",
+    ]
+    changed = False
+    for block_key in ("quantization", "quantization_config"):
+        block = data.get(block_key)
+        if not isinstance(block, dict):
+            continue
+        for list_key in ("exclude_modules", "ignore"):
+            lst = block.get(list_key)
+            if not isinstance(lst, list):
+                continue
+            for item in needed:
+                if item in lst:
+                    continue
+                ins = None
+                for i, existing in enumerate(lst):
+                    if "layers.44" in str(existing):
+                        ins = i + 1
+                if ins is None:
+                    vis = next((i for i, e in enumerate(lst) if e == "model.visual*"), None)
+                    ins = vis if vis is not None else len(lst)
+                lst.insert(ins, item)
+                changed = True
+    return changed
+
+
 def reverse_exported_shards(model, export_dir: Path) -> None:
     from modelopt.torch.export.quant_aware_conversion import (
         _build_reverse_rules,
@@ -183,7 +216,7 @@ def reverse_exported_shards(model, export_dir: Path) -> None:
         mapper = build_reverse_name_mapper(model)
     except Exception as exc:
         print("NAME_MAPPER_WARN", type(exc).__name__, exc, flush=True)
-        return
+        mapper = None
 
     for name in ("hf_quant_config.json", "config.json"):
         path = export_dir / name
@@ -191,11 +224,14 @@ def reverse_exported_shards(model, export_dir: Path) -> None:
             continue
         data = json.loads(path.read_text())
         changed = False
-        if isinstance(data.get("quantization"), dict):
-            revert_quant_config_names(data["quantization"], mapper)
-            changed = True
-        if isinstance(data.get("quantization_config"), dict):
-            revert_quant_config_names(data["quantization_config"], mapper)
+        if mapper is not None:
+            if isinstance(data.get("quantization"), dict):
+                revert_quant_config_names(data["quantization"], mapper)
+                changed = True
+            if isinstance(data.get("quantization_config"), dict):
+                revert_quant_config_names(data["quantization_config"], mapper)
+                changed = True
+        if ensure_mtp_bf16_excludes(data):
             changed = True
         if changed:
             path.write_text(json.dumps(data, indent=2) + "\n")

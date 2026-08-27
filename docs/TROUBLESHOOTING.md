@@ -38,6 +38,10 @@ The pack is not finalized. Do not upload it yet.
 
 The pack is not validated. Do not upload it.
 
+## vLLM shape crash 512 vs 1024 on layer 45 experts
+
+MTP (`layers.45`) is BF16. If it is missing from `exclude_modules` / `quantization_config.ignore`, vLLM allocates packed NVFP4 buffers (half the last dim) and the load fails. Add `model.language_model.layers.45*` and `model.language_model.layers.45.mlp.experts*`.
+
 ## Some 3D `self_attn.conv1d.weight` tensors remain fused
 
 The reference run observed `QuantConversionUnsupportedError` for some 3D reverse rules. The script logs the condition and retains the fused tensor for that shard instead of destroying the export. Validate against your intended server/loader before calling the pack serve-ready.
