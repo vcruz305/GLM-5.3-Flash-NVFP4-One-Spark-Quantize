@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.log
+state.json
+progress.json
+modelopt_state.pt
+offload/
+*.safetensors
+*.gguf
